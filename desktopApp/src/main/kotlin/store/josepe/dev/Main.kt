@@ -29,7 +29,8 @@ fun main() {
     application {
         val repository = remember { GitHubStoreRepository() }
         val installer = remember { AppInstaller() }
-        val viewModel = remember { StoreViewModel(repository, installer, isAndroid = false) }
+        val updateManager = remember { store.josepe.dev.data.manager.StoreUpdateManager() }
+        val viewModel = remember { StoreViewModel(repository, installer, updateManager, isAndroid = false) }
 
         val windowState = rememberWindowState(width = 1060.dp, height = 740.dp)
 

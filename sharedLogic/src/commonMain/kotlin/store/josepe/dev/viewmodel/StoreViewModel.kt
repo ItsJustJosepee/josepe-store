@@ -13,9 +13,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import store.josepe.dev.data.manager.StoreUpdateInfo
+import store.josepe.dev.data.manager.StoreUpdateManager
+
 class StoreViewModel(
     private val repository: GitHubStoreRepository,
     private val installer: AppInstaller,
+    val updateManager: StoreUpdateManager? = null,
     private val isAndroid: Boolean
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -41,6 +45,7 @@ class StoreViewModel(
     fun loadCatalog() {
         scope.launch {
             _isLoading.value = true
+            launch { updateManager?.checkForUpdate() }
             val fetched = repository.fetchStoreApps(isAndroid)
             val updated = fetched.map { app ->
                 val installed = installer.isAppInstalled(app.repoName)
@@ -50,6 +55,14 @@ class StoreViewModel(
             _apps.value = updated
             _isLoading.value = false
         }
+    }
+
+    fun updateStoreNow() {
+        updateManager?.launchUpdate()
+    }
+
+    fun dismissStoreUpdate() {
+        updateManager?.dismiss()
     }
 
     fun selectApp(app: StoreApp?) {

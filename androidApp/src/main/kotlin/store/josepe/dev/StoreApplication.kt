@@ -15,7 +15,8 @@ class StoreApplication : Application() {
         
         val androidModule = module {
             single { AppInstaller(androidContext()) }
-            single { StoreViewModel(get(), get(), isAndroid = true) }
+            single { store.josepe.dev.data.manager.StoreUpdateManager(androidContext()) }
+            single { StoreViewModel(get(), get(), get(), isAndroid = true) }
         }
 
         startKoin {

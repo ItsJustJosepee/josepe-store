@@ -34,6 +34,7 @@ import store.josepe.dev.ui.components.AppCard
 import store.josepe.dev.ui.components.AppDetailContent
 import store.josepe.dev.ui.components.glassContainerColor
 import store.josepe.dev.ui.components.glassEffect
+import store.josepe.dev.ui.components.StoreUpdateBanner
 import store.josepe.dev.ui.util.PlatformBackHandler
 import store.josepe.dev.viewmodel.StoreViewModel
 
@@ -284,6 +285,8 @@ fun CatalogScreen(
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
+                    StoreUpdateBanner(viewModel = viewModel)
+
                     if (isLoading && apps.isNotEmpty()) {
                         LinearProgressIndicator(
                             modifier = Modifier
