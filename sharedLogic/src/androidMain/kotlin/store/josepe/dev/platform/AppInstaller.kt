@@ -132,6 +132,7 @@ actual class AppInstaller(
         return when (repoOrName.lowercase()) {
             "josepechat", "josepe-chat", "josepe-chat-app" -> "chat.josepe.dev"
             "jepulse" -> "dev.josepe.jepulse"
+            "josepe-store", "josepestore", "josepe-store-app" -> "store.josepe.dev"
             else -> repoOrName
         }
     }
@@ -154,6 +155,6 @@ actual class AppInstaller(
             if (match != null) return match
         }
 
-        return apks.firstOrNull { it.name.contains("universal", ignoreCase = true) } ?: apks.firstOrNull()
+        return apks.firstOrNull { it.name.contains("universal", ignoreCase = true) || it.name.contains("-all", ignoreCase = true) } ?: apks.firstOrNull()
     }
 }
