@@ -55,6 +55,30 @@ data class FirestoreArrayValue(
     val values: List<FirestoreValue> = emptyList()
 )
 
+// Josepe Dev Vercel API Response
+@Serializable
+data class JosepeDevStoreApiResponse(
+    val success: Boolean = false,
+    val source: String? = null,
+    val apps: List<JosepeDevAppDto> = emptyList()
+)
+
+@Serializable
+data class JosepeDevAppDto(
+    val id: String,
+    val title: String,
+    val description: String = "",
+    val clearDescription: String = "",
+    val changelog: String = "",
+    val changelogUrl: String? = null,
+    val iconUrl: String? = null,
+    val webUrl: String? = null,
+    val mobileUrl: String? = null,
+    val githubRepo: String? = null,
+    val tags: List<String> = emptyList(),
+    val status: String = "active"
+)
+
 data class StoreApp(
     val id: String,
     val repoName: String,

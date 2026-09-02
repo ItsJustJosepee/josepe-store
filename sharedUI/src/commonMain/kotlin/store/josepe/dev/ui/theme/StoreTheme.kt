@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -44,17 +45,29 @@ val StoreButtonShape = RoundedCornerShape(12.dp)
 
 @Composable
 fun JosepeStoreTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = isPlatformSystemDarkTheme(),
+    dynamicColor: Boolean = true,
+    blurEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val baseScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val finalColorScheme = PlatformThemeHook(
+        darkTheme = darkTheme,
+        dynamicColor = dynamicColor,
+        colorScheme = baseScheme
+    )
+
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = finalColorScheme,
         shapes = Shapes(
             small = RoundedCornerShape(8.dp),
             medium = StoreCardShape,
             large = RoundedCornerShape(20.dp)
         ),
-        content = content
+        content = {
+            CompositionLocalProvider(LocalBlurEnabled provides blurEnabled) {
+                content()
+            }
+        }
     )
 }

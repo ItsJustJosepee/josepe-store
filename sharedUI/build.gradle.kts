@@ -25,13 +25,16 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
             implementation(libs.koin.compose)
             implementation(libs.markdown.renderer.m3)
+            implementation(libs.haze)
         }
         
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.ktx)
         }
         
         jvmMain.dependencies {

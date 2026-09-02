@@ -1,8 +1,8 @@
 package store.josepe.dev.data.repository
 
-import store.josepe.dev.data.model.*
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
@@ -13,6 +13,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import store.josepe.dev.data.model.*
 
 class GitHubStoreRepository(
     private val client: HttpClient = createDefaultHttpClient()
@@ -20,6 +21,7 @@ class GitHubStoreRepository(
     companion object {
         private const val OWNER = "ItsJustJosepee"
         private const val GITHUB_BASE_URL = "https://api.github.com"
+        private const val VERCEL_API_URL = "https://josepe.dev/api/store"
         private const val FIRESTORE_PROJECTS_URL =
             "https://firestore.googleapis.com/v1/projects/josepedev-data/databases/(default)/documents/projects"
 
@@ -31,6 +33,10 @@ class GitHubStoreRepository(
                         isLenient = true
                     })
                 }
+                install(HttpTimeout) {
+                    requestTimeoutMillis = 10000
+                    connectTimeoutMillis = 8000
+                }
                 defaultRequest {
                     header("User-Agent", "JosepeStore-KMP/1.0.0")
                     header("Accept", "application/vnd.github.v3+json, application/json")
@@ -41,84 +47,74 @@ class GitHubStoreRepository(
 
     /**
      * Fetches store catalog by combining:
-     * 1. Official projects configured in Firestore (josepedev-data)
+     * 1. Official Vercel Edge API (https://josepe.dev/api/store) with Firestore fallback
      * 2. Public GitHub releases and assets from ItsJustJosepee
      */
     suspend fun fetchStoreApps(isAndroid: Boolean): List<StoreApp> = withContext(Dispatchers.Default) {
         val appsMap = mutableMapOf<String, StoreApp>()
 
-        // 1. Fetch from Firestore (josepedev official website database)
+        // 1. Try Vercel API first (Edge Cached, ultra fast, zero Firestore read exhaust)
+        var fetchedFromVercel = false
         try {
-            val firestoreResponse: HttpResponse = client.get(FIRESTORE_PROJECTS_URL)
-            if (firestoreResponse.status.value in 200..299) {
-                val firestoreData: FirestoreProjectsResponse = firestoreResponse.body()
-                
-                for (doc in firestoreData.documents) {
-                    val fields = doc.fields
-                    val id = fields["id"]?.stringValue ?: doc.name.substringAfterLast("/")
-                    val title = fields["title"]?.stringValue ?: id
-                    val desc = fields["clearDescription"]?.stringValue
-                        ?: fields["description"]?.stringValue
-                        ?: ""
-                    val iconUrl = fields["iconUrl"]?.stringValue
-                    val webUrl = fields["webUrl"]?.stringValue?.takeIf { it.isNotEmpty() }
-                        ?: fields["url"]?.stringValue?.takeIf { it.startsWith("http") }
-                    val tags = fields["tags"]?.arrayValue?.values?.mapNotNull { it.stringValue } ?: emptyList()
-                    val status = fields["status"]?.stringValue ?: "active"
-                    val githubRepo = fields["githubRepo"]?.stringValue
-                    val changelogUrl = fields["changelogUrl"]?.stringValue
-
-                    var latestVersion = "1.0.0"
-                    var releaseDate = ""
-                    var changelog = ""
-                    var assets = emptyList<GitHubAsset>()
-                    var repoUrl = ""
-
-                    // Fetch real-time GitHub release assets if repo is configured
-                    if (!githubRepo.isNullOrEmpty()) {
-                        val repoName = githubRepo.substringAfterLast("/")
-                        repoUrl = "https://github.com/$githubRepo"
-                        val release = fetchLatestRelease(repoName)
-                        if (release != null) {
-                            latestVersion = release.tagName.removePrefix("v")
-                            releaseDate = release.publishedAt?.take(10) ?: ""
-                            assets = filterAssetsForPlatform(release.assets, isAndroid)
-                            changelog = release.body?.trim().orEmpty()
-                        }
+            val vercelResponse: HttpResponse = client.get(VERCEL_API_URL)
+            if (vercelResponse.status.value in 200..299) {
+                val apiData: JosepeDevStoreApiResponse = vercelResponse.body()
+                if (apiData.apps.isNotEmpty()) {
+                    fetchedFromVercel = true
+                    for (appDto in apiData.apps) {
+                        val resolvedApp = enrichAppWithGitHub(appDto, isAndroid)
+                        appsMap[resolvedApp.repoName.lowercase()] = resolvedApp
                     }
-
-                    // If changelog is empty and changelogUrl exists, fetch the raw markdown changelog
-                    if (changelog.isEmpty() && !changelogUrl.isNullOrEmpty()) {
-                        changelog = fetchRawMarkdown(changelogUrl) ?: ""
-                    }
-
-                    if (changelog.isEmpty()) {
-                        changelog = desc
-                    }
-
-                    val app = StoreApp(
-                        id = id,
-                        repoName = githubRepo?.substringAfterLast("/") ?: id,
-                        displayName = title,
-                        description = desc,
-                        latestVersion = latestVersion,
-                        releaseDate = releaseDate,
-                        changelog = changelog,
-                        iconUrl = iconUrl,
-                        tags = tags,
-                        webUrl = webUrl,
-                        assets = assets,
-                        repoUrl = repoUrl,
-                        status = status
-                    )
-                    appsMap[app.repoName.lowercase()] = app
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Vercel API not deployed yet or network error, fallback to direct Firestore
         }
 
-        // 2. Fetch additional GitHub repos that might not be in Firestore yet
+        // 2. Fallback to direct Firestore REST if Vercel API didn't return apps
+        if (!fetchedFromVercel) {
+            try {
+                val firestoreResponse: HttpResponse = client.get(FIRESTORE_PROJECTS_URL)
+                if (firestoreResponse.status.value in 200..299) {
+                    val firestoreData: FirestoreProjectsResponse = firestoreResponse.body()
+                    for (doc in firestoreData.documents) {
+                        val fields = doc.fields
+                        val id = fields["id"]?.stringValue ?: doc.name.substringAfterLast("/")
+                        val title = fields["title"]?.stringValue ?: id
+                        val desc = fields["clearDescription"]?.stringValue
+                            ?: fields["description"]?.stringValue
+                            ?: ""
+                        val iconUrl = fields["iconUrl"]?.stringValue
+                        val webUrl = fields["webUrl"]?.stringValue?.takeIf { it.isNotEmpty() }
+                            ?: fields["url"]?.stringValue?.takeIf { it.startsWith("http") }
+                        val tags = fields["tags"]?.arrayValue?.values?.mapNotNull { it.stringValue } ?: emptyList()
+                        val status = fields["status"]?.stringValue ?: "active"
+                        val githubRepo = fields["githubRepo"]?.stringValue
+                        val changelogUrl = fields["changelogUrl"]?.stringValue
+
+                        val dto = JosepeDevAppDto(
+                            id = id,
+                            title = title,
+                            description = desc,
+                            clearDescription = desc,
+                            changelog = desc,
+                            changelogUrl = changelogUrl,
+                            iconUrl = iconUrl,
+                            webUrl = webUrl,
+                            githubRepo = githubRepo,
+                            tags = tags,
+                            status = status
+                        )
+                        val resolvedApp = enrichAppWithGitHub(dto, isAndroid)
+                        appsMap[resolvedApp.repoName.lowercase()] = resolvedApp
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // 3. Discover additional public GitHub repos from ItsJustJosepee
         try {
             val reposResponse: HttpResponse = client.get("$GITHUB_BASE_URL/users/$OWNER/repos?sort=updated&per_page=50")
             if (reposResponse.status.value in 200..299) {
@@ -127,11 +123,11 @@ class GitHubStoreRepository(
 
                 for (repo in candidateRepos) {
                     val key = repo.name.lowercase()
-                    if (appsMap.containsKey(key)) continue // Already loaded from Firestore
+                    if (appsMap.containsKey(key)) continue
 
                     val release = fetchLatestRelease(repo.name) ?: continue
                     val targetAssets = filterAssetsForPlatform(release.assets, isAndroid)
-                    
+
                     if (targetAssets.isNotEmpty()) {
                         val cleanTitle = formatAppName(repo.name)
                         appsMap[key] = StoreApp(
@@ -158,11 +154,72 @@ class GitHubStoreRepository(
             appsMap[fallback.repoName.lowercase()] = fallback
         }
 
-        // Return apps sorted: featured first, then with native builds, then others
+        // Sort: Featured first, then native builds, then alphabetical
         appsMap.values.sortedWith(
             compareByDescending<StoreApp> { it.status == "featured" }
                 .thenByDescending { it.hasNativeBuilds }
                 .thenBy { it.displayName }
+        )
+    }
+
+    private suspend fun enrichAppWithGitHub(dto: JosepeDevAppDto, isAndroid: Boolean): StoreApp {
+        var latestVersion = "1.0.0"
+        var releaseDate = ""
+        var changelog = dto.changelog
+        var assets = emptyList<GitHubAsset>()
+        var repoUrl = ""
+
+        if (!dto.githubRepo.isNullOrEmpty()) {
+            val repoName = dto.githubRepo.substringAfterLast("/")
+            repoUrl = "https://github.com/${dto.githubRepo}"
+            val release = fetchLatestRelease(repoName)
+            if (release != null) {
+                latestVersion = release.tagName.removePrefix("v")
+                releaseDate = release.publishedAt?.take(10) ?: ""
+                assets = filterAssetsForPlatform(release.assets, isAndroid)
+                if (release.body?.isNotBlank() == true) {
+                    changelog = release.body.trim()
+                }
+            }
+        }
+
+        // Fetch full rich changelog from official live endpoints if applicable
+        val lowerId = dto.id.lowercase()
+        val lowerRepo = dto.githubRepo?.lowercase().orEmpty()
+        val lowerWeb = dto.webUrl?.lowercase().orEmpty()
+
+        if (lowerId.contains("chat") || lowerRepo.contains("chat") || lowerWeb.contains("chat.josepe.dev")) {
+            val liveChangelog = fetchRawMarkdown("https://chat.josepe.dev/changelog.md")
+            if (!liveChangelog.isNullOrBlank()) {
+                changelog = liveChangelog.trim()
+            }
+        } else if (lowerId.contains("music") || lowerRepo.contains("music") || lowerWeb.contains("music.josepe.dev")) {
+            val liveChangelog = fetchRawMarkdown("https://music.josepe.dev/changelog.md")
+            if (!liveChangelog.isNullOrBlank()) {
+                changelog = liveChangelog.trim()
+            }
+        } else if (changelog.isBlank() && !dto.changelogUrl.isNullOrEmpty()) {
+            changelog = fetchRawMarkdown(dto.changelogUrl) ?: dto.clearDescription
+        }
+
+        if (changelog.isBlank()) {
+            changelog = dto.clearDescription.ifBlank { dto.description }
+        }
+
+        return StoreApp(
+            id = dto.id,
+            repoName = dto.githubRepo?.substringAfterLast("/") ?: dto.id,
+            displayName = dto.title,
+            description = dto.clearDescription.ifBlank { dto.description },
+            latestVersion = latestVersion,
+            releaseDate = releaseDate,
+            changelog = changelog,
+            iconUrl = dto.iconUrl,
+            tags = dto.tags,
+            webUrl = dto.webUrl,
+            assets = assets,
+            repoUrl = repoUrl,
+            status = dto.status
         )
     }
 
@@ -223,14 +280,15 @@ class GitHubStoreRepository(
             id = "jchat",
             repoName = "josepechat",
             displayName = "Josepe Chat",
-            description = "Plataforma de mensajería Local-First y E2EE interoperable con PWA, Android y Desktop.",
+            description = "* **Qué es:** Mensajería instantánea Local-First, cifrada de extremo a extremo (E2EE).\n* **Características:** Sin dependencia de teléfono central, sincronización local y respaldos en la nube.",
             latestVersion = "1.6.2",
             releaseDate = "2026-09-02",
             changelog = "### Novedades v1.6.2\n- Separación en 4 arquitecturas nativas (arm64-v8a, armeabi-v7a, x86_64, x86).\n- Reducción del tamaño a la mitad (~60MB).\n- Optimizaciones de TLS y renderizado Markdown.",
             assets = emptyList(),
             repoUrl = "https://github.com/$OWNER/josepechat",
             status = "featured",
-            webUrl = "https://chat.josepe.dev"
+            webUrl = "https://chat.josepe.dev",
+            iconUrl = "https://chat.josepe.dev/icon-512x512.png"
         )
     }
 }

@@ -1,20 +1,23 @@
 package store.josepe.dev.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Launch
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.mikepenz.markdown.m3.Markdown
+import androidx.compose.ui.window.DialogProperties
 import store.josepe.dev.data.model.DownloadProgress
 import store.josepe.dev.data.model.StoreApp
 import store.josepe.dev.ui.theme.StoreButtonShape
@@ -29,11 +32,15 @@ fun AppDetailDialog(
     onOpenClick: () -> Unit,
     onOpenWebClick: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.85f),
+                .fillMaxWidth(0.92f)
+                .widthIn(max = 680.dp)
+                .fillMaxHeight(0.88f),
             shape = StoreCardShape,
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
@@ -41,67 +48,81 @@ fun AppDetailDialog(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp)
+                    .padding(24.dp)
             ) {
-                // Header
+                // Header with AsyncAppIcon
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                if (app.status == "featured") MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = app.displayName.take(2).uppercase(),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = if (app.status == "featured") MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    AsyncAppIcon(
+                        iconUrl = app.iconUrl,
+                        displayName = app.displayName,
+                        size = 72.dp,
+                        shape = RoundedCornerShape(18.dp)
+                    )
 
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = app.displayName,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = app.displayName,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(3.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Josepe Dev Oficial",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Oficial",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+
                         Spacer(modifier = Modifier.height(4.dp))
+
                         Text(
-                            text = if (app.hasNativeBuilds) "Versión ${app.latestVersion} • ${app.releaseDate}" else "Aplicación Web",
+                            text = if (app.hasNativeBuilds) "Versión ${app.latestVersion} • ${app.releaseDate}" else "Aplicación Web Oficial",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                // Tags
+                // Tags chips
                 if (app.tags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         app.tags.forEach { tag ->
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
                             ) {
                                 Text(
                                     text = tag,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -109,26 +130,27 @@ fun AppDetailDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Scrollable Content
+                // Scrollable Content with StoreMarkdown
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Descripción y Características",
-                        style = MaterialTheme.typography.titleSmall,
+                        text = "Descripción y Novedades",
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    
-                    Markdown(
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    StoreMarkdown(
                         content = app.changelog,
+                        isCompact = false,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -143,7 +165,7 @@ fun AppDetailDialog(
                 ) {
                     TextButton(
                         onClick = onDismiss,
-                        shape = StoreButtonShape
+                        shape = RoundedCornerShape(20.dp)
                     ) {
                         Text("Cerrar")
                     }
@@ -152,9 +174,15 @@ fun AppDetailDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         OutlinedButton(
                             onClick = onOpenWebClick,
-                            shape = StoreButtonShape
+                            shape = RoundedCornerShape(20.dp)
                         ) {
-                            Text("Abrir Web")
+                            Icon(
+                                imageVector = Icons.Default.OpenInBrowser,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Visitar Web", fontWeight = FontWeight.SemiBold)
                         }
                     }
 
@@ -163,20 +191,32 @@ fun AppDetailDialog(
                     if (app.isInstalled) {
                         Button(
                             onClick = onOpenClick,
-                            shape = StoreButtonShape,
+                            shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondary
                             )
                         ) {
-                            Text("Abrir")
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Launch,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Abrir", fontWeight = FontWeight.Bold)
                         }
                     } else if (app.hasNativeBuilds) {
                         Button(
                             onClick = onInstallClick,
-                            shape = StoreButtonShape,
+                            shape = RoundedCornerShape(20.dp),
                             enabled = downloadProgress !is DownloadProgress.Downloading && downloadProgress !is DownloadProgress.Installing
                         ) {
-                            Text("Instalar")
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Instalar", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

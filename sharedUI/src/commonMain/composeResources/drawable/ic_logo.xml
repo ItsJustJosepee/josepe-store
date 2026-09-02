@@ -1,0 +1,123 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="315dp"
+    android:height="315dp"
+    android:viewportWidth="315"
+    android:viewportHeight="315">
+
+    <!-- Shopping Bag Handle Background -->
+    <path
+        android:pathData="M 122,105 C 122,32 193,32 193,105"
+        android:strokeWidth="14"
+        android:strokeColor="#A78BFA"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Shopping Bag Handle Shadow -->
+    <path
+        android:pathData="M 122,105 C 122,35 193,35 193,105"
+        android:strokeWidth="8"
+        android:strokeColor="#7C3AED"
+        android:strokeLineCap="round" />
+
+    <!-- Shopping Bag Main Body -->
+    <path
+        android:pathData="M 64,96 L 251,96 C 257,96 261,100 260,106 L 244,280 C 243,286 238,290 232,290 L 83,290 C 77,290 72,286 71,280 L 55,106 C 54,100 58,96 64,96 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="157.5"
+                android:startY="96"
+                android:endX="157.5"
+                android:endY="290"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#7C3AED" />
+                <item android:offset="0.6" android:color="#6D28D9" />
+                <item android:offset="1.0" android:color="#4C1D95" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Shopping Bag Right Side Shading (Depth) -->
+    <path
+        android:pathData="M 157.5,96 L 251,96 C 257,96 261,100 260,106 L 244,280 C 243,286 238,290 232,290 L 157.5,290 Z"
+        android:fillColor="#1A000000" />
+
+    <!-- Shopping Bag Top Fold Rim -->
+    <path
+        android:pathData="M 58,96 L 257,96 L 254,114 L 61,114 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="58"
+                android:startY="105"
+                android:endX="257"
+                android:endY="105"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#8B5CF6" />
+                <item android:offset="1.0" android:color="#6D28D9" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Shopping Bag Front Handle Overlap -->
+    <path
+        android:pathData="M 122,114 L 122,96 M 193,114 L 193,96"
+        android:strokeWidth="10"
+        android:strokeColor="#C4B5FD"
+        android:strokeLineCap="round" />
+
+    <!-- Authentic Josepe Chat Cube - Scaled down & positioned on the front of the bag -->
+    <group
+        android:scaleX="0.54"
+        android:scaleY="0.54"
+        android:pivotX="162"
+        android:pivotY="125"
+        android:translateX="-4.5"
+        android:translateY="68">
+
+        <!-- Rotating Card (Gradient Fill) -->
+        <path
+            android:pathData="M255.42,96.47L139.95,29.81A4.76,4.76 118.28,0 0,133.45 31.55L66.78,147.02A4.76,4.76 118.28,0 0,68.52 153.53L183.99,220.19A4.76,4.76 118.28,0 0,190.5 218.45L257.17,102.98A4.76,4.76 118.28,0 0,255.42 96.47z"
+            android:fillType="nonZero">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="197.69"
+                    android:startY="63.14"
+                    android:endX="126.26"
+                    android:endY="186.86"
+                    android:type="linear">
+                    <item android:offset="0.0" android:color="#FFFFFF00" />
+                    <item android:offset="1.0" android:color="#FFFF7D00" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- Rotating Card (Black Border Outline) -->
+        <path
+            android:pathData="M255.42,96.47L139.95,29.81A4.76,4.76 118.28,0 0,133.45 31.55L66.78,147.02A4.76,4.76 118.28,0 0,68.52 153.53L183.99,220.19A4.76,4.76 118.28,0 0,190.5 218.45L257.17,102.98A4.76,4.76 118.28,0 0,255.42 96.47z"
+            android:strokeWidth="9"
+            android:strokeColor="#000000"
+            android:strokeLineJoin="round"
+            android:strokeLineCap="round" />
+
+        <!-- Left Eye -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M190.7,160.13m10.78,6.23a12.45,12.45 93.63,1 0,-21.56 -12.45a12.45,12.45 93.63,1 0,21.56 12.45"
+            android:strokeWidth="1.8"
+            android:strokeColor="#000000" />
+
+        <!-- Right Eye -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M117.19,117.68m10.78,6.23a12.45,12.45 93.63,1 0,-21.56 -12.45a12.45,12.45 93.63,1 0,21.56 12.45"
+            android:strokeWidth="1.2"
+            android:strokeColor="#000000" />
+
+        <!-- Mouth -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M173.89,179.01L109.24,141.69A3.87,4.76 120,0 0,103.18 142.66L103.18,142.66A3.87,4.76 120,0 0,105.36 148.4L170.02,185.72A3.87,4.76 120,0 0,176.08 184.75L176.08,184.75A3.87,4.76 120,0 0,173.89 179.01z"
+            android:strokeWidth="1.8"
+            android:strokeColor="#000000" />
+    </group>
+</vector>
