@@ -28,6 +28,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Read version name
+        id: ver
+        run: |
+          VERSION=$(grep 'app-version = ' gradle/libs.versions.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Materialize Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -47,26 +53,28 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [ -f androidApp/release.keystore ]; then
-            echo "Keystore found: building signed Release APK..."
+            echo "Keystore found: building minified & signed Release APK..."
             ./gradlew :androidApp:assembleRelease
           else
             echo "Keystore not found: building Debug APK..."
             ./gradlew :androidApp:assembleDebug
           fi
 
+      - name: Stage Android APK
+        run: |
+          mkdir -p dist_android
+          VERSION="${{ steps.ver.outputs.version }}"
+          find androidApp/build/outputs/apk -name '*.apk' | while read -r apk; do
+            cp "$apk" "dist_android/josepe-store-android-v${VERSION}.apk"
+          done
+          echo "Staged APKs:"
+          ls -la dist_android/
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: josepe-store-apk
-          path: androidApp/build/outputs/apk/*/*.apk
-
-      - name: Publish Android Release Asset
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: androidApp/build/outputs/apk/release/*.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: android-apk
+          path: dist_android/*.apk
 
   build_desktop:
     name: Build Desktop (${{ matrix.os }})
@@ -90,24 +98,91 @@ jobs:
         shell: bash
         run: chmod +x gradlew || true
 
-      - name: Build Desktop Distribution
+      - name: Read version name
+        id: ver
+        shell: bash
+        run: |
+          VERSION=$(grep 'app-version = ' gradle/libs.versions.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Minified Desktop Distribution
         shell: bash
         run: ./gradlew :desktopApp:packageDistributionForCurrentOS
 
-      - name: Upload Installers
+      - name: Stage Desktop Installers
+        shell: bash
+        run: |
+          mkdir -p dist_desktop
+          VERSION="${{ steps.ver.outputs.version }}"
+          find desktopApp/build/compose/binaries/main -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.msi" -o -name "*.dmg" \) | while read -r bin; do
+            ext="${bin##*.}"
+            case "$ext" in
+              deb)
+                cp "$bin" "dist_desktop/josepe-store-linux-v${VERSION}.deb"
+                ;;
+              AppImage)
+                cp "$bin" "dist_desktop/josepe-store-linux-v${VERSION}.AppImage"
+                ;;
+              msi)
+                cp "$bin" "dist_desktop/josepe-store-windows-v${VERSION}.msi"
+                ;;
+              dmg)
+                cp "$bin" "dist_desktop/josepe-store-macos-v${VERSION}.dmg"
+                ;;
+              *)
+                cp "$bin" "dist_desktop/"
+                ;;
+            esac
+          done
+          echo "Staged desktop binaries:"
+          ls -la dist_desktop/
+
+      - name: Upload Desktop Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: josepe-store-${{ matrix.os }}
-          path: desktopApp/build/compose/binaries/main/*
+          name: desktop-${{ matrix.os }}
+          path: dist_desktop/*
 
-      - name: Publish Desktop Release Assets
-        if: startsWith(github.ref, 'refs/tags/v')
+  publish_release:
+    name: Publish Official GitHub Release
+    needs: [build_android, build_desktop]
+    if: github.event_name == 'push' && (github.ref_name == 'main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version name
+        id: ver
+        run: |
+          VERSION=$(grep 'app-version = ' gradle/libs.versions.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all_artifacts
+
+      - name: Consolidate Release Assets
+        run: |
+          mkdir -p dist_release
+          find all_artifacts -type f \( -name "*.apk" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.msi" -o -name "*.dmg" \) -exec cp {} dist_release/ \;
+          echo "Consolidated assets for release:"
+          ls -la dist_release/
+
+      - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            desktopApp/build/compose/binaries/main/deb/*.deb
-            desktopApp/build/compose/binaries/main/appimage/*.AppImage
-            desktopApp/build/compose/binaries/main/msi/*.msi
-            desktopApp/build/compose/binaries/main/dmg/*.dmg
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: Josepe Store v${{ steps.ver.outputs.version }}
+          body: |
+            ### Josepe Store v${{ steps.ver.outputs.version }}
+            Distribución Oficial Multiplataforma (Android, Windows, macOS, Linux).
+            - Compilaciones nativas minificadas con ProGuard / R8 y runtime JRE optimizado.
+            - Auto-detección y descarga directa desde el catálogo oficial de Josepe Dev.
+            - Commit: `${{ github.sha }}`
+          prerelease: false
+          draft: false
+          files: dist_release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

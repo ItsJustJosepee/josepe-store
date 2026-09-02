@@ -43,7 +43,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -70,8 +70,15 @@ android {
                 "META-INF/*.kotlin_module",
                 "META-INF/DEPENDENCIES",
                 "META-INF/LICENSE*",
-                "META-INF/NOTICE*"
+                "META-INF/NOTICE*",
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1",
+                "DebugProbesKt.bin"
             )
+        }
+        jniLibs {
+            useLegacyPackaging = false
+            keepDebugSymbols.clear()
         }
     }
 }
