@@ -94,7 +94,7 @@ actual class StoreUpdateManager(
         try {
             _downloadProgress.value = DownloadProgress.Downloading(0f, 0L, info.assetSize)
 
-            val downloadDir = context.getExternalFilesDir(null) ?: context.filesDir
+            val downloadDir = context.externalCacheDir ?: context.getExternalFilesDir(null) ?: context.cacheDir
             val apkFile = File(downloadDir, "josepe-store-update.apk")
             if (apkFile.exists()) apkFile.delete()
 
