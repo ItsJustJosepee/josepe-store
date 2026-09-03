@@ -5,7 +5,7 @@
   <Identity Name="JosepeDev.JosepeStore"
             ProcessorArchitecture="x64"
             Publisher="CN=JosepeDev"
-            Version="1.0.0.0" />
+            Version="1.0.1.0" />
   <Properties>
     <DisplayName>Josepe Store</DisplayName>
     <PublisherDisplayName>Josepe Dev</PublisherDisplayName>

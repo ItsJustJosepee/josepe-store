@@ -1,7 +1,7 @@
 package store.josepe.dev
 
 object StoreConfig {
-    const val VERSION_NAME = "1.0.0"
+    val VERSION_NAME: String get() = SharedBuildConfig.VERSION_NAME
     const val REPO_OWNER = "ItsJustJosepee"
     const val REPO_NAME = "josepe-store"
 }

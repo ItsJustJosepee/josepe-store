@@ -38,7 +38,7 @@ class GitHubStoreRepository(
                     connectTimeoutMillis = 8000
                 }
                 defaultRequest {
-                    header("User-Agent", "JosepeStore-KMP/1.0.0")
+                    header("User-Agent", "JosepeStore-KMP/${store.josepe.dev.StoreConfig.VERSION_NAME}")
                     header("Accept", "application/vnd.github.v3+json, application/json")
                 }
             }

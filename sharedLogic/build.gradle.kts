@@ -52,3 +52,30 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+val generateBuildConfig = tasks.register("generateBuildConfig") {
+    val version = libs.versions.app.version.get()
+    val outputDir = layout.buildDirectory.dir("generated/source/buildConfig/commonMain/kotlin").get().asFile
+    inputs.property("version", version)
+    outputs.dir(outputDir)
+    doLast {
+        val file = File(outputDir, "store/josepe/dev/BuildConfig.kt")
+        file.parentFile.mkdirs()
+        file.writeText(
+            """
+            package store.josepe.dev
+
+            internal object SharedBuildConfig {
+                const val VERSION_NAME: String = "$version"
+            }
+            """.trimIndent()
+        )
+    }
+}
+
+kotlin.sourceSets.getByName("commonMain").kotlin.srcDir(generateBuildConfig.map { layout.buildDirectory.dir("generated/source/buildConfig/commonMain/kotlin") })
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    dependsOn(generateBuildConfig)
+}
+
