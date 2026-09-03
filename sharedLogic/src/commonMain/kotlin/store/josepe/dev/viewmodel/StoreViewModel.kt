@@ -53,6 +53,11 @@ class StoreViewModel(
                 app.copy(isInstalled = installed, installedVersion = installedVer)
             }
             _apps.value = updated
+            _selectedApp.update { current ->
+                if (current != null) {
+                    updated.firstOrNull { it.repoName == current.repoName } ?: current
+                } else null
+            }
             _isLoading.value = false
         }
     }
@@ -78,10 +83,16 @@ class StoreViewModel(
                 if (progress is DownloadProgress.Completed) {
                     // Refresh status
                     val isInstalled = installer.isAppInstalled(app.repoName)
+                    val installedVer = installer.getInstalledVersion(app.repoName)
                     _apps.update { list ->
                         list.map {
-                            if (it.repoName == app.repoName) it.copy(isInstalled = isInstalled) else it
+                            if (it.repoName == app.repoName) it.copy(isInstalled = isInstalled, installedVersion = installedVer) else it
                         }
+                    }
+                    _selectedApp.update { current ->
+                        if (current?.repoName == app.repoName) {
+                            current.copy(isInstalled = isInstalled, installedVersion = installedVer)
+                        } else current
                     }
                 }
             }

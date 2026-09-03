@@ -1,6 +1,7 @@
 package store.josepe.dev.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -110,13 +111,51 @@ fun AppDetailContent(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(5.dp))
 
-                Text(
-                    text = if (app.hasNativeBuilds) "Versión ${app.latestVersion} • ${app.releaseDate}" else "Aplicación Web Oficial",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (app.isInstalled && app.isUpdateAvailable) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = "Actualización",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Text(
+                            text = "v${app.installedVersion} → v${app.latestVersion}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                } else if (app.isInstalled) {
+                    Text(
+                        text = "Versión instalada v${app.installedVersion ?: app.latestVersion} • ${app.releaseDate}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else if (app.hasNativeBuilds) {
+                    Text(
+                        text = "Versión ${app.latestVersion} • ${app.releaseDate}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        text = "Aplicación Web Oficial",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -163,21 +202,53 @@ fun AppDetailContent(
                 }
                 else -> {
                     if (app.isInstalled) {
-                        Button(
-                            onClick = onOpenClick,
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary
-                            ),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Launch,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Abrir App", fontWeight = FontWeight.Bold)
+                        if (app.isUpdateAvailable) {
+                            Button(
+                                onClick = onInstallClick,
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Actualizar", fontWeight = FontWeight.Bold)
+                            }
+
+                            OutlinedButton(
+                                onClick = onOpenClick,
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Launch,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Abrir", fontWeight = FontWeight.SemiBold)
+                            }
+                        } else {
+                            Button(
+                                onClick = onOpenClick,
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Launch,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Abrir App", fontWeight = FontWeight.Bold)
+                            }
                         }
                     } else if (app.hasNativeBuilds) {
                         Button(
@@ -231,23 +302,43 @@ fun AppDetailContent(
             }
         }
 
-        // Tags
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // 1. Descripción de la Aplicación (PRIMERO)
+        if (app.description.isNotBlank()) {
+            Text(
+                text = "Descripción",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            StoreMarkdown(
+                content = app.description,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // 2. Tags Categorías (ABAJO DE LA DESCRIPCIÓN Y DESLIZABLE HORIZONTALMENTE)
         if (app.tags.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 app.tags.forEach { tag ->
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     ) {
                         Text(
                             text = tag,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            fontSize = 11.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -256,11 +347,11 @@ fun AppDetailContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(18.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // Full Changelog Timeline Section
+        // 3. Historial de Cambios y Versiones (DESPUÉS)
         Text(
             text = "Historial de Cambios y Versiones",
             style = MaterialTheme.typography.titleMedium,

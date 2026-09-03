@@ -98,6 +98,43 @@ data class StoreApp(
 ) {
     val hasNativeBuilds: Boolean
         get() = assets.isNotEmpty()
+
+    val isUpdateAvailable: Boolean
+        get() {
+            if (!isInstalled || !hasNativeBuilds) return false
+            val installed = installedVersion ?: return false
+            return isNewerVersion(latestVersion, installed)
+        }
+}
+
+fun isNewerVersion(remote: String, local: String): Boolean {
+    if (remote.trim().equals(local.trim(), ignoreCase = true)) return false
+
+    val rBase = remote.substringBefore("-").trim()
+    val lBase = local.substringBefore("-").trim()
+
+    val rParts = rBase.split(".").map { it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
+    val lParts = lBase.split(".").map { it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
+    val maxLen = maxOf(rParts.size, lParts.size)
+
+    for (i in 0 until maxLen) {
+        val r = rParts.getOrElse(i) { 0 }
+        val l = lParts.getOrElse(i) { 0 }
+        if (r > l) return true
+        if (r < l) return false
+    }
+
+    val rBuild = remote.substringAfter("build.", "").filter { it.isDigit() }.toIntOrNull()
+    val lBuild = local.substringAfter("build.", "").filter { it.isDigit() }.toIntOrNull()
+
+    if (rBuild != null && lBuild != null) {
+        return rBuild > lBuild
+    }
+    if (rBuild != null && lBuild == null) {
+        return true
+    }
+
+    return false
 }
 
 sealed interface DownloadProgress {

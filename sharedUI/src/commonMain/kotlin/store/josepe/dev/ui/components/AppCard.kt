@@ -3,7 +3,9 @@ package store.josepe.dev.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -135,7 +137,33 @@ fun AppCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        if (app.hasNativeBuilds) {
+                        if (app.isInstalled && app.isUpdateAvailable) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = "Actualizar v${app.latestVersion}",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        } else if (app.isInstalled) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            ) {
+                                Text(
+                                    text = "v${app.installedVersion ?: app.latestVersion}",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else if (app.hasNativeBuilds) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
@@ -193,10 +221,12 @@ fun AppCard(
             if (app.tags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    app.tags.take(3).forEach { tag ->
+                    app.tags.forEach { tag ->
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -253,21 +283,40 @@ fun AppCard(
                     }
                     else -> {
                         if (app.isInstalled) {
-                            Button(
-                                onClick = onOpenClick,
-                                shape = RoundedCornerShape(20.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondary
-                                ),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Launch,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Abrir", fontWeight = FontWeight.Bold)
+                            if (app.isUpdateAvailable) {
+                                Button(
+                                    onClick = onInstallClick,
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Actualizar", fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Button(
+                                    onClick = onOpenClick,
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Launch,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Abrir", fontWeight = FontWeight.Bold)
+                                }
                             }
                         } else if (app.hasNativeBuilds) {
                             Button(

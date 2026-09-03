@@ -13,6 +13,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import store.josepe.dev.StoreConfig
 import store.josepe.dev.data.model.*
 
 class GitHubStoreRepository(
@@ -62,8 +63,11 @@ class GitHubStoreRepository(
                 if (apiData.apps.isNotEmpty()) {
                     fetchedFromVercel = true
                     for (appDto in apiData.apps) {
+                        if (isSelfApp(appDto.id) || isSelfApp(appDto.githubRepo)) continue
                         val resolvedApp = enrichAppWithGitHub(appDto, isAndroid)
-                        appsMap[resolvedApp.repoName.lowercase()] = resolvedApp
+                        if (!isSelfApp(resolvedApp.id) && !isSelfApp(resolvedApp.repoName)) {
+                            appsMap[resolvedApp.repoName.lowercase()] = resolvedApp
+                        }
                     }
                 }
             }
@@ -106,7 +110,9 @@ class GitHubStoreRepository(
                             status = status
                         )
                         val resolvedApp = enrichAppWithGitHub(dto, isAndroid)
-                        appsMap[resolvedApp.repoName.lowercase()] = resolvedApp
+                        if (!isSelfApp(resolvedApp.id) && !isSelfApp(resolvedApp.repoName)) {
+                            appsMap[resolvedApp.repoName.lowercase()] = resolvedApp
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -119,11 +125,11 @@ class GitHubStoreRepository(
             val reposResponse: HttpResponse = client.get("$GITHUB_BASE_URL/users/$OWNER/repos?sort=updated&per_page=50")
             if (reposResponse.status.value in 200..299) {
                 val repos: List<GitHubRepo> = reposResponse.body()
-                val candidateRepos = repos.filter { !it.fork }
+                val candidateRepos = repos.filter { !it.fork && !isSelfApp(it.name) }
 
                 for (repo in candidateRepos) {
                     val key = repo.name.lowercase()
-                    if (appsMap.containsKey(key)) continue
+                    if (isSelfApp(key) || appsMap.containsKey(key)) continue
 
                     val release = fetchLatestRelease(repo.name) ?: continue
                     val targetAssets = filterAssetsForPlatform(release.assets, isAndroid)
@@ -154,12 +160,23 @@ class GitHubStoreRepository(
             appsMap[fallback.repoName.lowercase()] = fallback
         }
 
-        // Sort: Featured first, then native builds, then alphabetical
-        appsMap.values.sortedWith(
-            compareByDescending<StoreApp> { it.status == "featured" }
-                .thenByDescending { it.hasNativeBuilds }
-                .thenBy { it.displayName }
-        )
+        // Sort: Featured first, then native builds, then alphabetical, excluding self
+        appsMap.values
+            .filterNot { isSelfApp(it.id) || isSelfApp(it.repoName) }
+            .sortedWith(
+                compareByDescending<StoreApp> { it.status == "featured" }
+                    .thenByDescending { it.hasNativeBuilds }
+                    .thenBy { it.displayName }
+            )
+    }
+
+    private fun isSelfApp(repoOrName: String?): Boolean {
+        val name = repoOrName?.substringAfterLast("/")?.lowercase()?.trim().orEmpty()
+        return name == "josepe-store" ||
+                name == "josepestore" ||
+                name == "store.josepe.dev" ||
+                name == "josepe-store-app" ||
+                name == StoreConfig.REPO_NAME.lowercase()
     }
 
     private suspend fun enrichAppWithGitHub(dto: JosepeDevAppDto, isAndroid: Boolean): StoreApp {
